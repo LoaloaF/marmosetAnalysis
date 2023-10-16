@@ -1,0 +1,36 @@
+2023-09-30 22:21:51,199|INFO|__main__.py:
+	This is a regular log message.
+====================================================
+
+%(asctime)s|%(levelname)s|%(name)s.py:
+	%(message)s
+2023-09-30 22:21:52,135|INFO|__main__.py:
+	This is a regular log message.
+====================================================
+
+%(asctime)s|%(levelname)s|%(name)s.py:
+	%(message)s
+2023-09-30 22:21:53,992|INFO|__main__.py:
+	This is a regular log message.
+====================================================
+
+%(asctime)s|%(levelname)s|%(name)s.py:
+	%(message)s
+2023-09-30 22:21:58,672|INFO|__main__.py:
+	This is a regular log message.
+====================================================
+
+%(asctime)s|%(levelname)s|%(name)s.py:
+	%(message)s
+2023-09-30 22:22:12,901|INFO|__main__.py:
+	This is a regular log message.
+====================================================
+
+%(asctime)s|%(levelname)s|%(name)s.py:
+	%(message)s
+2023-09-30 22:22:21,838|INFO|__main__.py:
+	This is a regular log message.
+====================================================
+
+%(asctime)s|%(levelname)s|%(name)s.py:
+	%(message)s
