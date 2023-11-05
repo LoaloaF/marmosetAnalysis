@@ -2,10 +2,9 @@ import os
 import pandas as pd
 import numpy as np
 
-from config import *
+from ..general_modules.config import *
 from CustomLogger import CustomLogger
 
-from data_utils import unix2pd_datetime
 from data_utils import check_timeseries_integrity
 from video_utils import write_facecam_vid
 
@@ -14,8 +13,10 @@ from data_io import read_sensor_file
 from data_io import read_reward_file
 from data_io import read_video_ts_files
 from data_io import write_dict2json
-from data_io import write_hdf5
+from data_io import write_pkl
 from data_io import load_prepoc_data
+
+
 
 class MarmosetSessionData():
     logger = CustomLogger(__name__, write_to_directory=LOG_TO_DIR)
@@ -41,20 +42,13 @@ class MarmosetSessionData():
             
             # load the video frame timestamps data and preprocess, check videos
             frontcam_ts, scenecam_ts, facecam_ts = read_video_ts_files(data_path, 
-                                                                    self.logger)
+                                                                       self.logger)
             ret = self._preproc_expframe_ts_data(frontcam_ts, scenecam_ts, facecam_ts)
             self.frontcam_ts, self.scenecam_ts, self.facecam_ts = ret
             
             # prepare saving the data, create an annotated face camera video
             dest_path = os.path.join(data_path, "preproc_"+self.session_name)
-            self._save_prepoc_data(dest_path)
-            write_facecam_vid(vid_fname=os.path.join(data_path, FACE_CAM_FNAME),
-                              frame_ts=self.frontcam_ts,
-                              lick_frames=self._get_lickframes(self.facecam_ts),
-                              reward_frames=self._get_rewardframes(self.facecam_ts),
-                              dest_path=dest_path,
-                              output_fname=FACECAM_VID_OUTFNAME,
-                              logger=self.logger)
+            self._save_prepoc_data(dest_path)    
         
         elif readwrite_preproc == 'read':
             (self.expframe_ts_data, self.lick_data, self.dist_left_data, 
@@ -91,11 +85,13 @@ class MarmosetSessionData():
             return
         self.logger.info("Processing lick sensor data")
 
+        # ensure that sessions start and end with no lick
         lick_data.iloc[-1] = 0
+        lick_data.iloc[0] = 0
         lick_onoff = lick_data.diff().fillna(0).astype(int)
 
         lick_d = {}
-        lick_d['start'] = lick_data.iloc[np.where(lick_onoff==1)].index
+        lick_d['start'] = lick_data.iloc[np.where(lick_onoff==1)[0]].index
         lick_d['end'] = lick_data.iloc[np.where(lick_onoff==-1)[0] -1].index
         lick_data = pd.DataFrame(lick_d)
         lick_data['duration'] = lick_d['end']-lick_d['start']
@@ -156,7 +152,7 @@ class MarmosetSessionData():
                          FRONTCAM_TS_OUTFNAME: self.frontcam_ts,
                          SCENECAM_TS_OUTFNAME: self.scenecam_ts,
                          FACECAM_TS_OUTFNAME: self.facecam_ts}
-        [write_hdf5(dest_path, fname, data, self.logger) 
+        [write_pkl(dest_path, fname, data, self.logger) 
          for fname, data in fname_mapping.items()]
         write_dict2json(self.metad, dest_path, "metadata.json")
 
@@ -173,7 +169,7 @@ class MarmosetSessionData():
 
     @property
     def session_start(self):
-        return self.expframe_ts_data.index[0]
+        return self.expframe_ts_data.index[0] + pd.Timedelta(seconds=7200)
     
     @property
     def session_start_date(self):
@@ -185,11 +181,11 @@ class MarmosetSessionData():
     
     @property
     def session_stop(self):
-        return self.expframe_ts_data.index[-1]
+        return self.expframe_ts_data.index[-1] + pd.Timedelta(seconds=7200)
     
     @property
     def session_length(self):
-        return self.session_stop-self.session_start 
+        return self.session_stop-self.session_start  
     
     @property
     def reward_delivered_ml(self):
@@ -204,5 +200,5 @@ class MarmosetSessionData():
         return self.reward_data.shape[0]
     
     @property
-    def reward_events_per_hour(self):
-        return self.n_reward_events /(self.session_length.total_seconds()/3600)
+    def reward_events_per_min(self):
+        return self.n_reward_events /(self.session_length.total_seconds()/60)
