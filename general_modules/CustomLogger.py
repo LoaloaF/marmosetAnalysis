@@ -1,7 +1,8 @@
 import os
 import logging
-import config
 import datetime
+
+import general_modules.config as config
 
 class CustomLogger:
     """
@@ -94,7 +95,8 @@ class CustomLogger:
         self._default_file_fmtr = self._create_formatter(file_fmt)
 
         self._console_hdlr.setFormatter(self._default_console_fmtr)
-        self._file_hdlr.setFormatter(self._default_file_fmtr)
+        if self._file_hdlr is not None:
+            self._file_hdlr.setFormatter(self._default_file_fmtr)
 
     def spacer(self):
         """

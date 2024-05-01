@@ -2,21 +2,19 @@ import os
 import pandas as pd
 import numpy as np
 
-from ..general_modules.config import *
-from CustomLogger import CustomLogger
+from .data_utils import check_timeseries_integrity
+from .video_utils import write_facecam_vid
 
-from data_utils import check_timeseries_integrity
-from video_utils import write_facecam_vid
+from .data_io import read_metadata_file
+from .data_io import read_sensor_file
+from .data_io import read_reward_file
+from .data_io import read_video_ts_files
+from .data_io import write_dict2json
+from .data_io import write_pkl
+from .data_io import load_prepoc_data
 
-from data_io import read_metadata_file
-from data_io import read_sensor_file
-from data_io import read_reward_file
-from data_io import read_video_ts_files
-from data_io import write_dict2json
-from data_io import write_pkl
-from data_io import load_prepoc_data
-
-
+from general_modules.config import *
+from general_modules.CustomLogger import CustomLogger
 
 class MarmosetSessionData():
     logger = CustomLogger(__name__, write_to_directory=LOG_TO_DIR)
@@ -38,7 +36,7 @@ class MarmosetSessionData():
             self.dist_left_data = self._preproc_dist_data(dist_left_d)
 
             # load the reward data
-            self.reward_data = read_reward_file(data_path, self.logger)
+            self.reward_data, self.onoff_swtiches = read_reward_file(data_path, self.logger)
             
             # load the video frame timestamps data and preprocess, check videos
             frontcam_ts, scenecam_ts, facecam_ts = read_video_ts_files(data_path, 
@@ -52,8 +50,9 @@ class MarmosetSessionData():
         
         elif readwrite_preproc == 'read':
             (self.expframe_ts_data, self.lick_data, self.dist_left_data, 
-            self.reward_data, self.frontcam_ts, self.scenecam_ts, 
+            self.reward_data, self.onoff_swtiches, self.frontcam_ts, self.scenecam_ts, 
             self.facecam_ts) = load_prepoc_data(data_path, self.logger)
+            print(self.reward_data)
 
         else:
             self.logger.critical((f"Invalid input for `readwrite_preproc`: "
@@ -149,6 +148,7 @@ class MarmosetSessionData():
                          LICK_OUTFNAME: self.lick_data,
                          DIST_LEFT_OUTFNAME: self.dist_left_data,
                          REWARD_OUTFNAME: self.reward_data,
+                         ONOFF_OUTFNAME: self.onoff_swtiches,
                          FRONTCAM_TS_OUTFNAME: self.frontcam_ts,
                          SCENECAM_TS_OUTFNAME: self.scenecam_ts,
                          FACECAM_TS_OUTFNAME: self.facecam_ts}

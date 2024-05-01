@@ -2,12 +2,13 @@ import os
 import pickle
 import pandas as pd
 
-from MarmosetSessionData import MarmosetSessionData
-from ..general_modules.config import *
-from CustomLogger import CustomLogger
+from .MarmosetSessionData import MarmosetSessionData
 
-from plotting import plot_sessions_overview
-from plotting import plot_session_timeline
+from general_modules.config import *
+from general_modules.CustomLogger import CustomLogger
+
+from analysis.plotting import plot_sessions_overview
+from analysis.plotting import plot_session_timeline
 
 class MarmosetDataset:
     logger = CustomLogger(__name__, write_to_directory=LOG_TO_DIR)
@@ -76,6 +77,8 @@ def main():
     #     pickle.dump(tmp, file)
     with open('dataset_tmp.pkl', 'rb') as file:
         tmp = pickle.load(file)
+    
+    dates = set([d.start_date for d in tmp.sessions])
     
     # plot_sessions_overview(tmp.subset_sessions(min_length=pd.Timedelta(seconds=2*60)))
     d = tmp.sessions[-1]

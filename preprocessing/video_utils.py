@@ -4,7 +4,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
-import config
+from general_modules.config import *
 
 def check_video_file(video_file, logger):
     vid_cap = open_video(video_file, logger)
@@ -59,9 +59,9 @@ def write_facecam_vid(vid_fname, frame_ts, lick_frames, reward_frames,
     logger.info("Writing annotated facecamera video")
 
     fourcc = cv2.VideoWriter_fourcc(*'H264')
-    x, y, width = config.FACE_CAM_CROP
+    x, y, width = FACE_CAM_CROP
     fps = vid_cap.get(cv2.CAP_PROP_FPS)
-    dest_fname = os.path.join(dest_path, output_fname+config.VIDEO_FILE_ENDING)
+    dest_fname = os.path.join(dest_path, output_fname+VIDEO_FILE_ENDING)
     out = cv2.VideoWriter(dest_fname, fourcc, fps, (width, width))
 
     last_reward_frame = -1

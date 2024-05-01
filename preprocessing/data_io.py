@@ -2,18 +2,21 @@ import os
 import json
 import numpy as np
 import pandas as pd
+import time
+from datetime import datetime
 
-from config import *
-from data_utils import check_negative_deltatimes
-from data_utils import check_video_ts_match
-from data_utils import unix2pd_datetime
+from .data_utils import check_negative_deltatimes
+from .data_utils import check_video_ts_match
+from .data_utils import unix2pd_datetime
 
-from video_utils import check_video_file
+from .video_utils import check_video_file
+
+from general_modules.config import *
 
 def read_metadata_file(data_path):
     try:
         return read_json(data_path, "metadata.json")
-    except FileNotFoundError as e:
+    except FileNotFoundError:
         start_date, start_time = data_path.split(os.path.sep)[-2:]
         return {"rewardVolume":40, "interRewardInterval":3, "distanceLimit":6,
                 "cameraFPS":30, "session_start_date": start_date,
@@ -47,12 +50,24 @@ def read_reward_file(data_path, logger):
         reward_d_fname = os.path.join(data_path, REWARD_DATA_FNAME)
         with open(reward_d_fname, 'r') as rew_file:
             tstamps = []
+            onoff_swtiches = []
             for line in rew_file:
                 try:
-                    tstamps.append(float(line.split(" ")[-1]) )
+                    print(line.split(" "))
+                    elements = line.split(" ")
+                    tstamps.append(float(elements[-1]))
                 except ValueError as e:
-                    logger.warning(f"{e} -> Line will be skipped")
-        return pd.Series(True, unix2pd_datetime(tstamps), name='reward_events')
+                    if elements[-1] in ("ON\n", "OFF\n"):
+                        timestamp_str = " ".join(elements[:2]) 
+                        timestamp_dt = datetime.strptime(timestamp_str, "%Y-%m-%d %H:%M:%S,%f")
+                        timestamp_unix = time.mktime(timestamp_dt.timetuple()) + timestamp_dt.microsecond / 1e6
+                        timestamp_unix += 3600
+                        
+                        onoff_swtiches.append((timestamp_unix, (1 if elements[-1]=="ON\n" else -1)))
+                    else:
+                        logger.warning(f"{e} -> Line will be skipped")
+        onoff_swtiches = pd.DataFrame(onoff_swtiches).set_index(0, drop=True).squeeze()
+        return pd.Series(True, unix2pd_datetime(tstamps), name='reward_events'), onoff_swtiches
 
     except FileNotFoundError as e:
         logger.error(f"{e} - Reward events data will be None.")
@@ -85,6 +100,15 @@ def read_video_ts_files(data_path, logger):
         except FileNotFoundError as e:
             logger.error(f"{e} Frame timestamps data will be None.")
             frame_tstamps.append(None)
+
+        except pd.errors.ParserError as e:
+            logger.error(f"{e} Frame timestamps data will be None.")
+            frame_tstamps.append(None)
+        
+        except pd.errors.EmptyDataError as e:
+            logger.error(f"{e} Frame timestamps data will be None.")
+            frame_tstamps.append(None)
+
     return frame_tstamps
 
 def read_json(data_path, fname):
@@ -107,24 +131,46 @@ def read_notes_txt_file(data_path, fname):
     except FileNotFoundError:
         return ""
         
-def write_hdf5(dest_path, output_fname, data, logger):
-    if data is not None:
-        dest_fname = os.path.join(dest_path, output_fname+".hdf5")
-        data.to_hdf(dest_fname, key='data', format='table', complib='zlib', 
-                    complevel=1, mode='w')
-    else:
-        logger.warning(f"{output_fname} is None. No file will be written.")
+# def write_hdf5(dest_path, output_fname, data, logger):
+#     print(output_fname)
+#     print(data)
+#     if data is not None:
+#         dest_fname = os.path.join(dest_path, output_fname+".hdf5")
+#         data.to_hdf(dest_fname, key='data', format='table', complib='zlib', 
+#                     complevel=1, mode='w')
+#     else:
+#         logger.warning(f"{output_fname} is None. No preprocced data will be saved.")
 
-def read_hdf5(data_path, fname, logger):
+# def read_hdf5(data_path, fname, logger):
+#     full_fname = os.path.join(data_path, fname+".hdf5")
+#     print(full_fname)
+#     try:
+#         return pd.read_hdf(full_fname, key='data')
+#     except FileNotFoundError as e:
+#         logger.error(f"{full_fname} not found. Data will be None.")
+#         return None
+
+def write_pkl(dest_path, output_fname, data, logger):
+    if data is not None:
+        dest_fname = os.path.join(dest_path, output_fname + ".pkl")
+        data.to_pickle(dest_fname)
+    else:
+        logger.warning(f"{output_fname} is None. No preprocessed data will be saved.")
+
+def read_pkl(data_path, fname, logger):
+    full_fname = os.path.join(data_path, fname + ".pkl")
     try:
-        full_fname = os.path.join(data_path, fname+".hdf5")
-        return pd.read_hdf(full_fname, key='data')
+        return pd.read_pickle(full_fname)
     except FileNotFoundError as e:
-        logger.error(f"{output_fname} not found. Data will be None.")
+        logger.error(f"{full_fname} not found. Data will be None.")
         return None
 
+
 def load_prepoc_data(data_path, logger):
+    logger.info("Loading preprocessed data.")
+    prerpoc_path = [os.path.join(data_path,el) for el in os.listdir(data_path) 
+                            if os.path.isdir(os.path.join(data_path,el))][0]
     fnames = (EXPFRAME_TS_OUTFNAME, LICK_OUTFNAME, DIST_LEFT_OUTFNAME, 
-              REWARD_OUTFNAME, FRONTCAM_TS_OUTFNAME, SCENECAM_TS_OUTFNAME, 
+              REWARD_OUTFNAME, ONOFF_OUTFNAME, FRONTCAM_TS_OUTFNAME, SCENECAM_TS_OUTFNAME, 
               FACECAM_TS_OUTFNAME)
-    return [read_hdf5(data_path, fn, logger) for fn in fnames]
+    return [read_pkl(prerpoc_path, fn, logger) for fn in fnames]

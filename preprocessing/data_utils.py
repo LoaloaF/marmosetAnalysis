@@ -2,14 +2,21 @@ import os
 import json
 import pandas as pd
 import numpy as np
+from datetime import timedelta as datetime_timedelta
 
-from video_utils import open_video
-from video_utils import get_frame_count
-from video_utils import release_cap
+from .video_utils import open_video
+from .video_utils import get_frame_count
+from .video_utils import release_cap
 
 def unix2pd_datetime(tstamps, unit="s"):
     datetimes = pd.to_datetime(tstamps, unit=unit, origin='unix', errors='coerce')
     return datetimes
+
+def pdTimetelta2datetimeTimedelta(pd_deltatime):
+    days = pd_deltatime.days
+    seconds = pd_deltatime.seconds
+    mseconds = pd_deltatime.microseconds
+    return datetime_timedelta(days=days, seconds=seconds, microseconds=mseconds)
 
 def check_negative_deltatimes(times, logger):
     deltatimes = np.insert(np.diff(times), 0, np.nan)
@@ -53,7 +60,7 @@ def check_video_ts_match(frame_tstamps, vid_fname, logger):
     vid_nframes = get_frame_count(vid_cap)
     n_frame_ts = frame_tstamps.shape[0]
     if vid_nframes != n_frame_ts:
-        logger.warning(f"{vid_fname}: Video has {vid_nframes} frames"
-                       f", but timestamp file has {n_frame_ts} entries."
+        logger.warning(f"{vid_fname}:\nVideo has {vid_nframes} frames"
+                       f", but timestamp file has {n_frame_ts} entries.\n"
                        f"Processing will assume matching 0-indices.")
     release_cap(vid_cap)

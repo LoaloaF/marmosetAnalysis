@@ -3,7 +3,12 @@ import os
 from MarmosetSessionData import MarmosetSessionData
 from plotting import plot_session_timeline, plot_reward2lick_hist
 
+from MarmosetDataset import MarmosetDataset
+
 def main(data_path):
+    # MarmosetDataset(data_path="/mnt/NTnas/MarmosetBehavior/Data/")
+    # exit()
+    
     data_path_content = [os.path.join(data_path, dp) for dp in sorted(os.listdir(data_path))]
     # sessions_data = [MarmosetSessionData(dp) for dp in data_path_content]
 
